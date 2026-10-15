@@ -1,0 +1,21 @@
+# --- Web ---
+flask
+python-dotenv
+requests
+
+# --- Database ---
+# Supabase Postgres (optional: app falls back to SQLite without it)
+psycopg2-binary
+
+# --- Ingestion (used once files are uploaded) ---
+PyMuPDF
+python-pptx
+pypdf
+rank-bm25
+pydantic
+
+# --- Production server (optional) ---
+gunicorn
+
+# ---- Dev / CI ----
+pytest

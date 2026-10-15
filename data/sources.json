@@ -1,0 +1,67 @@
+[
+  {
+    "source_id": "ocw_6006_lec02",
+    "title": "Lecture 2: Data Structures (Arrays, Linked Lists, Hashing)",
+    "source_type": "video",
+    "creator": "MIT OpenCourseWare",
+    "provider": "MIT OCW",
+    "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/",
+    "license": "CC BY-NC-SA 4.0",
+    "attribution": "MIT OpenCourseWare, 6.006 Introduction to Algorithms",
+    "collected_at": "2026-10-08",
+    "topics": ["Hashing", "Arrays", "Linked Lists"],
+    "redistribution_allowed": "per license, with attribution"
+  },
+  {
+    "source_id": "ocw_6006_lec03",
+    "title": "Lecture 3: Sorting",
+    "source_type": "video",
+    "creator": "MIT OpenCourseWare",
+    "provider": "MIT OCW",
+    "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/",
+    "license": "CC BY-NC-SA 4.0",
+    "attribution": "MIT OpenCourseWare, 6.006 Introduction to Algorithms",
+    "collected_at": "2026-10-08",
+    "topics": ["Sorting", "Merge Sort", "Radix Sort"],
+    "redistribution_allowed": "per license, with attribution"
+  },
+  {
+    "source_id": "ocw_6006_lec04",
+    "title": "Lecture 4: Hashing (continued) — Open Addressing, Cryptographic Hashing",
+    "source_type": "slide",
+    "creator": "MIT OpenCourseWare",
+    "provider": "MIT OCW",
+    "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/",
+    "license": "CC BY-NC-SA 4.0",
+    "attribution": "MIT OpenCourseWare, 6.006 Introduction to Algorithms",
+    "collected_at": "2026-10-08",
+    "topics": ["Hashing"],
+    "redistribution_allowed": "per license, with attribution"
+  },
+  {
+    "source_id": "ocw_6006_lec08",
+    "title": "Lecture 8: Binary Heaps",
+    "source_type": "slide",
+    "creator": "MIT OpenCourseWare",
+    "provider": "MIT OCW",
+    "url": "https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/",
+    "license": "CC BY-NC-SA 4.0",
+    "attribution": "MIT OpenCourseWare, 6.006 Introduction to Algorithms",
+    "collected_at": "2026-10-08",
+    "topics": ["Heaps", "Priority Queues"],
+    "redistribution_allowed": "per license, with attribution"
+  },
+  {
+    "source_id": "opendatastructures",
+    "title": "Open Data Structures (in pseudocode)",
+    "source_type": "pdf",
+    "creator": "Pat Morin",
+    "provider": "opendatastructures.org",
+    "url": "https://opendatastructures.org/",
+    "license": "CC BY 2.5 CA",
+    "attribution": "Pat Morin, Open Data Structures",
+    "collected_at": "2026-10-08",
+    "topics": ["Sorting", "Hashing", "Heaps", "Graphs"],
+    "redistribution_allowed": "per license, with attribution"
+  }
+]

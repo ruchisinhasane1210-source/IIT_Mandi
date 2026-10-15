@@ -1,0 +1,21 @@
+# --- Web ---
+flask
+python-dotenv
+requests
+
+# --- Database ---
+# Supabase Postgres (optional: app falls back to SQLite without it)
+psycopg2-binary
+
+# --- Ingestion (used once files are uploaded) ---
+# PyMuPDF and python-pptx are optional: extraction degrades gracefully
+# if they are missing, and the app still works with the seeded corpus.
+# PyMuPDF
+# python-pptx
+pypdf
+
+# --- Production server (optional) ---
+gunicorn
+
+# ---- Dev / CI ----
+pytest

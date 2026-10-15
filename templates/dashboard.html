@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Dashboard · TraceLearn{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <div class="page-head fade-up">
+    <div>
+      <div class="eyebrow">Course workspace</div>
+      <h1 class="page-title">{{ course.title if course else 'Your course' }}</h1>
+      <p class="page-sub">
+        Every answer is cited back to the exact page, slide or timestamp it came from —
+        and every quiz updates a prerequisite-aware model of what you actually know.
+      </p>
+    </div>
+    <div class="row wrap">
+      <a href="/upload" class="btn btn-outline">{{ icon('upload', 16) }} Add sources</a>
+      <a href="/assessment" class="btn btn-primary">{{ icon('quiz', 16) }} Start a quiz</a>
+    </div>
+  </div>
+
+  <!-- ------------------------------ stats ------------------------------ -->
+  <div class="grid cols-4 mb">
+    <div class="stat fade-up d1">
+      <div class="stat-label">Overall mastery</div>
+      <div class="stat-value">{{ (overall * 100) | round | int }}<small>%</small></div>
+      <div class="stat-hint">Mean BKT posterior across topics</div>
+    </div>
+    <div class="stat accent fade-up d2">
+      <div class="stat-label">Topics tracked</div>
+      <div class="stat-value">{{ counts.topics }}</div>
+      <div class="stat-hint">In the prerequisite graph</div>
+    </div>
+    <div class="stat fade-up d3">
+      <div class="stat-label">Citable units</div>
+      <div class="stat-value">{{ counts.units }}</div>
+      <div class="stat-hint">{{ counts.sources }} sources ingested</div>
+    </div>
+    <div class="stat high fade-up d4">
+      <div class="stat-label">Questions verified</div>
+      <div class="stat-value">{{ counts.questions }}</div>
+      <div class="stat-hint">Passed the verification gates</div>
+    </div>
+  </div>
+
+  <div class="grid cols-hero">
+
+    <!-- --------------------------- mastery --------------------------- -->
+    <div class="card fade-up d2">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Topic mastery</div>
+          <div class="card-sub">Weakest first — this is what the tutor targets next</div>
+        </div>
+        <a href="/mastery" class="btn btn-ghost btn-sm">Details {{ icon('arrow-right', 15) }}</a>
+      </div>
+      <div class="card-body">
+        {% for m in mastery %}
+        <div class="mastery-row">
+          <div class="mastery-name">
+            {{ m.name }}
+            <span>{{ m.attempts }} attempts · {{ m.misconceptions }} misconceptions</span>
+          </div>
+          <div class="mastery-track">
+            <div class="bar"><div class="bar-fill {{ m.band }}" style="width: {{ (m.p_mastery*100)|round|int }}%"></div></div>
+          </div>
+          <div class="mastery-pct">{{ (m.p_mastery*100)|round|int }}%</div>
+        </div>
+        {% else %}
+        <div class="empty">
+          <div class="empty-icon">{{ icon('target', 24) }}</div>
+          <div class="empty-title">No mastery data yet</div>
+          <div class="empty-sub">Run the diagnostic to seed your learner model.</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ------------------------- right column ------------------------ -->
+    <div class="stack">
+      {% if recommendation %}
+      <div class="card fade-up d3">
+        <div class="card-head">
+          <div class="card-title">
+            {% if recommendation.kind == 'prerequisite' %}Fix the foundation{% else %}Up next{% endif %}
+          </div>
+          <span class="badge {{ 'badge-mid' if recommendation.kind == 'prerequisite' else 'badge-primary' }}">
+            {{ recommendation.target_name }}
+          </span>
+        </div>
+        <div class="card-body">
+          <div class="note">
+            {{ icon('target', 18) }}
+            <div>{{ recommendation.reason }}</div>
+          </div>
+          <div class="row mt">
+            <a href="/assessment" class="btn btn-primary btn-sm">{{ icon('quiz', 15) }} Practice this</a>
+            <a href="/chat" class="btn btn-outline btn-sm">{{ icon('chat', 15) }} Ask the tutor</a>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card fade-up d4">
+        <div class="card-head">
+          <div class="card-title">Sources</div>
+          <a href="/upload" class="btn btn-ghost btn-sm">Manage</a>
+        </div>
+        <div class="card-body tight">
+          {% for s in sources %}
+          <div class="between" style="padding:10px 8px;border-bottom:1px solid var(--border)">
+            <div class="row">
+              <span class="empty-icon" style="width:34px;height:34px;margin:0;border-radius:10px">
+                {{ icon('video' if s.source_type=='video' else ('slides' if s.source_type=='slides' else 'file'), 16) }}
+              </span>
+              <div>
+                <div class="small strong">{{ s.file_name }}</div>
+                <div class="tiny muted">{{ s.license or 'license unknown' }}</div>
+              </div>
+            </div>
+            <span class="badge {{ 'badge-high' if s.processing_status=='done' else ('badge-mid' if s.processing_status=='processing' else 'badge') }}">
+              {{ s.processing_status }}
+            </span>
+          </div>
+          {% else %}
+          <div class="empty"><div class="empty-sub">No sources yet.</div></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- --------------------------- CTA strip --------------------------- -->
+  <div class="grid cols-3 mt-lg">
+    <a href="/chat" class="card pad fade-up d1" style="display:block">
+      <span class="brand-mark" style="border-radius:12px">{{ icon('chat', 20) }}</span>
+      <h3 class="card-title mt-sm">Ask a cited question</h3>
+      <p class="small muted mt-sm">Answers open the exact page, slide or timestamp — and off-material questions are refused.</p>
+    </a>
+    <a href="/graph" class="card pad fade-up d2" style="display:block">
+      <span class="brand-mark" style="border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--primary))">{{ icon('graph', 20) }}</span>
+      <h3 class="card-title mt-sm">See the concept map</h3>
+      <p class="small muted mt-sm">A prerequisite graph coloured by mastery, so blocked topics are obvious.</p>
+    </a>
+    <a href="/eval" class="card pad fade-up d3" style="display:block">
+      <span class="brand-mark" style="border-radius:12px;background:linear-gradient(135deg,#F59E0B,var(--low))">{{ icon('chart', 20) }}</span>
+      <h3 class="card-title mt-sm">Read the evaluation</h3>
+      <p class="small muted mt-sm">Refusal F1, retrieval hit rate and adaptive-vs-random simulated students.</p>
+    </a>
+  </div>
+
+</div>
+{% endblock %}

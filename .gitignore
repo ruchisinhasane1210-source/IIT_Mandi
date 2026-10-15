@@ -1,0 +1,37 @@
+# Secrets
+.env
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Local database
+*.db
+*.sqlite
+
+# Uploaded + generated media
+storage/
+data/course/
+
+# Local tooling and unpacked runtimes
+.freebuff/
+/DLLs/
+/Doc/
+/JDK/
+/Lib/
+/include/
+/python.exe
+/python3.dll
+/python314.dll
+/pythonw.exe
+/vcruntime140.dll
+/vcruntime140_1.dll
+/NEWS.txt
+
+# OS
+.DS_Store
+Thumbs.db

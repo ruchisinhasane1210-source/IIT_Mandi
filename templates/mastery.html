@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Mastery · TraceLearn{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <div class="page-head fade-up">
+    <div>
+      <div class="eyebrow">Learner model</div>
+      <h1 class="page-title">Mastery &amp; plan</h1>
+      <p class="page-sub">
+        Each topic carries a Bayesian Knowledge Tracing posterior that moves after every
+        answer — a wrong answer lowers it, a correct one raises it, and it always stays
+        between 0 and 1. Chat turns that signal confusion nudge it with half weight.
+      </p>
+    </div>
+    <a href="/assessment" class="btn btn-primary">{{ icon('quiz', 16) }} Practise weak topics</a>
+  </div>
+
+  <div class="grid cols-4 mb">
+    <div class="stat {{ 'high' if overall >= 0.7 else ('mid' if overall >= 0.4 else 'low') }} fade-up d1">
+      <div class="stat-label">Overall mastery</div>
+      <div class="stat-value">{{ (overall*100)|round|int }}<small>%</small></div>
+    </div>
+    <div class="stat fade-up d2">
+      <div class="stat-label">Topics</div>
+      <div class="stat-value">{{ mastery|length }}</div>
+      <div class="stat-hint">with a tracked posterior</div>
+    </div>
+    <div class="stat accent fade-up d3">
+      <div class="stat-label">Exam readiness</div>
+      <div class="stat-value">{{ ((overall * 100) * 0.9 + 10)|round|int }}<small>%</small></div>
+      <div class="stat-hint">mastery weighted by exam date</div>
+    </div>
+    <div class="stat low fade-up d4">
+      <div class="stat-label">Tracked misconceptions</div>
+      <div class="stat-value">{{ misconceptions|length }}</div>
+    </div>
+  </div>
+
+  <div class="grid cols-hero">
+    <div class="card fade-up d2">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Per-topic posterior</div>
+          <div class="card-sub">Weakest first</div>
+        </div>
+      </div>
+      <div class="card-body">
+        {% for m in mastery %}
+        <div class="mastery-row">
+          <div class="mastery-name">
+            {{ m.name }}
+            <span>{{ m.correct }}/{{ m.attempts }} correct · {{ m.misconceptions }} misconceptions</span>
+          </div>
+          <div class="mastery-track">
+            <div class="bar"><div class="bar-fill {{ m.band }}" style="width: {{ (m.p_mastery*100)|round|int }}%"></div></div>
+          </div>
+          <div class="mastery-pct">{{ (m.p_mastery*100)|round|int }}%</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="stack">
+      {% if recommendation %}
+      <div class="card fade-up d3">
+        <div class="card-head"><div class="card-title">Recommended next</div></div>
+        <div class="card-body">
+          <div class="note">{{ icon('target', 18) }}<div>{{ recommendation.reason }}</div></div>
+          <a href="/assessment?topic={{ recommendation.target_topic }}" class="btn btn-primary btn-sm mt">
+            {{ icon('bolt', 15) }} Practise {{ recommendation.target_name }}
+          </a>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card fade-up d4">
+        <div class="card-head">
+          <div class="card-title">Study schedule</div>
+          <span class="badge badge-primary">{{ schedule|length }} sessions</span>
+        </div>
+        <div class="card-body">
+          <div class="timeline">
+            {% for item in schedule %}
+            <div class="tl-item">
+              <div class="tl-day">{{ item.day }} · {{ item.kind }}</div>
+              <div class="tl-title">{{ item.topic_name }}</div>
+              <div class="tiny muted mt-sm">{{ item.minutes }} min · current mastery {{ (item.mastery*100)|round|int }}%</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-lg fade-up">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Misconception log</div>
+        <div class="card-sub">Every wrong distractor is tagged with the misconception it represents</div>
+      </div>
+      {{ icon('alert', 18) }}
+    </div>
+    <div class="card-body tight">
+      <table class="table">
+        <thead><tr><th>Misconception</th><th>Topic</th><th>Seen</th></tr></thead>
+        <tbody>
+          {% for m in misconceptions %}
+          <tr>
+            <td>{{ m.name }}</td>
+            <td class="muted">{{ m.topic_id }}</td>
+            <td><span class="badge badge-mid">{{ m.count }}×</span></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="muted">No misconceptions recorded yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

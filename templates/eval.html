@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Evaluation · TraceLearn{% endblock %}
+
+{% block content %}
+{% set ret = results.retrieval %}
+{% set ref = results.refusal %}
+{% set ver = results.verification %}
+{% set sim = results.simulation %}
+{% set rag = results.ragas %}
+
+<div class="page">
+
+  <div class="page-head fade-up">
+    <div>
+      <div class="eyebrow">Measured, not claimed</div>
+      <h1 class="page-title">Evaluation</h1>
+      <p class="page-sub">
+        Retrieval and refusal numbers are computed over a hand-built test set by running the
+        real pipeline — they need no LLM judge. The simulated-student comparison is a genuine
+        multi-seed simulation, not an illustration.
+      </p>
+    </div>
+    <button class="btn btn-outline" onclick="rerun(this)">{{ icon('refresh', 16) }} Re-run</button>
+  </div>
+
+  <!-- --------------------------- headline --------------------------- -->
+  <div class="grid cols-4 mb">
+    <div class="stat {{ 'high' if ret.hit_at_k >= 0.7 else 'mid' }} fade-up d1">
+      <div class="stat-label">Retrieval hit@{{ ret.k }}</div>
+      <div class="stat-value">{{ (ret.hit_at_k * 100) | round | int }}<small>%</small></div>
+      <div class="stat-hint">{{ ret.n }} grounded questions</div>
+    </div>
+    <div class="stat fade-up d2">
+      <div class="stat-label">MRR</div>
+      <div class="stat-value">{{ ret.mrr }}</div>
+      <div class="stat-hint">mean reciprocal rank of the right source</div>
+    </div>
+    <div class="stat {{ 'high' if ref.f1 >= 0.7 else 'mid' }} fade-up d3">
+      <div class="stat-label">Refusal F1</div>
+      <div class="stat-value">{{ ref.f1 }}</div>
+      <div class="stat-hint">precision {{ ref.precision }} · recall {{ ref.recall }}</div>
+    </div>
+    <div class="stat accent fade-up d4">
+      <div class="stat-label">Citation accuracy</div>
+      <div class="stat-value">{{ (ret.citation_accuracy * 100) | round | int }}<small>%</small></div>
+      <div class="stat-hint">top citation matches the expected source</div>
+    </div>
+  </div>
+
+  <div class="grid cols-hero mb">
+    <!-- ------------------------- simulation ------------------------- -->
+    <div class="card fade-up d2">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Adaptive vs random — simulated students</div>
+          <div class="card-sub">{{ sim.profiles|length }} profiles · {{ sim.sessions }} sessions · {{ sim.seeds }} seeds</div>
+        </div>
+      </div>
+      <div class="card-body">
+        {% set n = sim.sessions %}
+        <svg class="chart" viewBox="0 0 660 250" role="img" aria-label="Line chart of true mastery over sessions, adaptive versus random">
+          {% for y in [0.0, 0.25, 0.5, 0.75, 1.0] %}
+          <line class="chart-grid" x1="52" y1="{{ 210 - y*160 }}" x2="640" y2="{{ 210 - y*160 }}"/>
+          <text class="chart-label" x="14" y="{{ 214 - y*160 }}">{{ (y*100)|round|int }}%</text>
+          {% endfor %}
+
+          <path class="chart-line-random" d="{% for v in sim.random_curve %} {{ 'M' if loop.first else 'L' }} {{ 52 + loop.index0 * (588 / (n-1)) }} {{ 210 - v*160 }}{% endfor %}"/>
+          <path class="chart-line-adaptive" d="{% for v in sim.adaptive_curve %} {{ 'M' if loop.first else 'L' }} {{ 52 + loop.index0 * (588 / (n-1)) }} {{ 210 - v*160 }}{% endfor %}"/>
+
+          {% for v in sim.adaptive_curve %}
+          <circle class="chart-dot" cx="{{ 52 + loop.index0 * (588 / (n-1)) }}" cy="{{ 210 - v*160 }}" r="3.2"/>
+          {% endfor %}
+
+          {% for i in range(n) %}
+          <text class="chart-label" x="{{ 52 + i * (588 / (n-1)) }}" y="234" text-anchor="middle">{{ i+1 }}</text>
+          {% endfor %}
+        </svg>
+
+        <div class="row wrap mt">
+          <span class="badge badge-primary"><span class="dot"></span> Adaptive (TraceLearn)</span>
+          <span class="badge"><span class="dot"></span> Random baseline</span>
+          <span class="badge badge-high">+{{ ((sim.mean_weak_gain_adaptive - sim.mean_weak_gain_random) * 100) | round(1) }} pts on weakest topics</span>
+          <span class="badge badge-primary">mean {{ (sim.mean_gain_adaptive*100)|round(1) }}% vs {{ (sim.mean_gain_random*100)|round(1) }}%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- --------------------------- refusal -------------------------- -->
+    <div class="card fade-up d3">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Refusal decision</div>
+          <div class="card-sub">t_low {{ ref.thresholds.t_low }} · t_high {{ ref.thresholds.t_high }}</div>
+        </div>
+      </div>
+      <div class="card-body tight">
+        <table class="table">
+          <tbody>
+            <tr><td>Correct refusals (off-material refused)</td><td class="num strong">{{ ref.confusion.tp }}</td></tr>
+            <tr><td>Missed refusals</td><td class="num">{{ ref.confusion.fn }}</td></tr>
+            <tr><td>Wrong refusals (supported but refused)</td><td class="num">{{ ref.confusion.fp }}</td></tr>
+            <tr><td>Correctly answered</td><td class="num strong">{{ ref.confusion.tn }}</td></tr>
+          </tbody>
+        </table>
+        <div class="divider"></div>
+        <div class="stack-sm scroll-y" style="max-height:260px">
+          {% for item in ref['items'] %}
+          <div class="between" style="font-size:12.5px">
+            <span class="{{ 'muted' if not item.correct }}" style="flex:1">{{ item.question[:52] }}{% if item.question|length > 52 %}…{% endif %}</span>
+            <span class="badge {{ 'badge-high' if item.correct else 'badge-low' }}">{{ item.status.replace('_',' ') }}</span>
+            <span class="mono muted">{{ item.score }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid cols-2">
+    <!-- ------------------------- verification ------------------------ -->
+    <div class="card fade-up d2">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Question verification gates</div>
+          <div class="card-sub">{{ ver.verified }}/{{ ver.total }} questions verified · pass rate {{ (ver.pass_rate*100)|round|int }}%</div>
+        </div>
+      </div>
+      <div class="card-body">
+        {% for gate in ver.gates %}
+        <div class="mastery-row">
+          <div class="mastery-name">{{ gate.gate }} gate</div>
+          <div class="mastery-track">
+            <div class="bar"><div class="bar-fill primary" style="width: {{ (gate.pass_rate*100)|round|int }}%"></div></div>
+          </div>
+          <div class="mastery-pct">{{ (gate.pass_rate*100)|round|int }}%</div>
+        </div>
+        {% endfor %}
+        <div class="note mt">{{ icon('shield', 18) }}
+          <div>A question is kept only if it passes every gate: evidence, blind second-model
+            solve, numerical re-computation, ambiguity, citation resolution, topic tag and
+            near-duplicate rejection.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------------------------- rag ----------------------------- -->
+    <div class="card fade-up d3">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Grounding metrics</div>
+          <div class="card-sub">Faithfulness, relevancy, context precision &amp; recall</div>
+        </div>
+      </div>
+      <div class="card-body tight">
+        {% if rag.available %}
+        <table class="table">
+          <thead><tr><th>Metric</th><th>Score</th></tr></thead>
+          <tbody>
+            <tr><td>Faithfulness</td><td class="num strong">{{ rag.faithfulness }}</td></tr>
+            <tr><td>Answer relevancy</td><td class="num strong">{{ rag.answer_relevancy }}</td></tr>
+            <tr><td>Context precision</td><td class="num strong">{{ rag.context_precision }}</td></tr>
+            <tr><td>Context recall</td><td class="num strong">{{ rag.context_recall }}</td></tr>
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty">
+          <div class="empty-icon">{{ icon('key', 24) }}</div>
+          <div class="empty-title">Needs an LLM judge</div>
+          <div class="empty-sub">{{ rag.reason }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- --------------------------- per-profile -------------------------- -->
+  <div class="card mt-lg fade-up">
+    <div class="card-head">        <div>
+          <div class="card-title">Per-profile outcomes</div>
+          <div class="card-sub">Mean gain, gain on the weakest topics, estimation error and targeting</div>
+        </div>
+      </div>
+      <div class="card-body tight">
+        <table class="table">
+          <thead>
+            <tr><th>Profile</th><th>Policy</th><th>Mean gain</th><th>Weak-topic gain</th><th>Est. MAE</th><th>Targeting</th><th>Edge</th></tr>
+          </thead>
+          <tbody>
+            {% for p in sim.profiles %}
+            <tr>
+              <td rowspan="2" class="strong">{{ p.name }}</td>
+              <td><span class="badge badge-primary">adaptive</span></td>
+              <td class="num strong">{{ p.adaptive.mastery_gain }}</td>
+              <td class="num strong">{{ p.adaptive.weak_gain }}</td>
+              <td class="num">{{ p.adaptive.estimation_mae }}</td>
+              <td class="num">{{ (p.adaptive.weak_targeting*100)|round|int }}%</td>
+              <td rowspan="2">
+                {% if p.adaptive.weak_gain >= p.random.weak_gain %}
+                <span class="badge badge-high">adaptive</span>
+                {% else %}
+                <span class="badge">random</span>
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td><span class="badge">random</span></td>
+              <td class="num">{{ p.random.mastery_gain }}</td>
+              <td class="num">{{ p.random.weak_gain }}</td>
+              <td class="num">{{ p.random.estimation_mae }}</td>
+              <td class="num">{{ (p.random.weak_targeting*100)|round|int }}%</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div class="divider"></div>
+        <p class="small muted">
+          Adaptive wins on average and on the student's weakest topics, but the random baseline
+          still wins for some profiles — when a student is uniformly weak, spreading effort across
+          every topic lifts the mean more than concentrating on a few. We report this rather than
+          hide it.
+        </p>
+      </div>
+  </div>
+
+  <div class="note warn mt-lg fade-up">
+    {{ icon('alert', 18) }}
+    <div>
+      <strong>Limitations, stated honestly.</strong> One course and a small hand-built test set;
+      RAGAS relies on an LLM judge with its own biases; simulated students approximate but do not
+      replace real learners; BKT parameters are defaults unless fitted on real data; and
+      auto-extracted concept graphs can contain wrong prerequisite edges.
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function rerun(btn) {
+    btn.disabled = true;
+    btn.textContent = 'Running…';
+    fetch('/api/evaluation/run', { method: 'POST' })
+      .then(function (r) { return r.json(); })
+      .then(function () { location.reload(); })
+      .catch(function () { tlToast('Evaluation failed.'); btn.disabled = false; });
+  }
+</script>
+{% endblock %}

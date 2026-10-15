@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Tutor · TraceLearn{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <div class="page-head fade-up">
+    <div>
+      <div class="eyebrow">Grounded tutor</div>
+      <h1 class="page-title">Ask your course material</h1>
+      <p class="page-sub">
+        Answers are generated only from your uploaded sources. Grounding status is
+        <strong>computed from retrieval scores</strong>, not self-reported by the model —
+        so when the material doesn't cover something, it says so.
+      </p>
+    </div>
+    <div class="row">
+      <span class="badge badge-high"><span class="dot"></span> Grounded</span>
+      <span class="badge badge-mid"><span class="dot"></span> Partial</span>
+      <span class="badge badge-low"><span class="dot"></span> Not covered</span>
+    </div>
+  </div>
+
+  <div class="chat-layout">
+    <!-- ----------------------------- chat ----------------------------- -->
+    <div class="card fade-up d1">
+      <div class="chat-scroll" id="chat-scroll">
+        {% if not history %}
+        <div class="bubble bubble-bot">
+          <div class="strong">TraceLearn Tutor</div>
+          <p class="mt-sm">
+            Ask me anything about <em>{{ 'your course' }}</em>. I'll answer from your
+            sources and show you exactly where each claim came from. Try one of the
+            prompts below, or ask something the material doesn't cover to see the refusal.
+          </p>
+        </div>
+        {% endif %}
+
+        {% for m in history %}
+          {% if m.role == 'user' %}
+          <div class="bubble bubble-user">{{ m.content }}</div>
+          {% else %}
+          <div class="bubble bubble-bot">
+            <div>{{ m.content }}</div>
+            {% if m.grounding_status %}
+            <div class="bubble-meta">
+              <span class="badge {{ 'badge-high' if m.grounding_status=='grounded' else ('badge-mid' if m.grounding_status=='partial' else 'badge-low') }}">
+                <span class="dot"></span>{{ m.grounding_status.replace('_',' ') }}
+              </span>
+              <span class="mono">{{ m.grounding_score }}</span>
+            </div>
+            {% endif %}
+            {% if m.citations %}
+            <div class="cite-list">
+              {% for c in m.citations %}
+              <button class="cite" data-unit="{{ c.id }}">
+                {{ icon('play' if c.source_type=='video' else ('slides' if c.source_type=='slide' else 'file'), 14) }}
+                <span>{{ c | cite_label }}</span>
+                <span class="cite-type">{{ c.source_id }}</span>
+              </button>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <form class="chat-form" id="chat-form" autocomplete="off">
+        <input class="chat-input" id="chat-input" placeholder="e.g. Why can heap construction run in linear time?" aria-label="Ask a question">
+        <button class="btn btn-primary" type="submit" id="chat-send">{{ icon('send', 16) }} Ask</button>
+      </form>
+    </div>
+
+    <!-- ------------------------- source panel ------------------------- -->
+    <div class="source-panel">
+      <div class="card fade-up d2">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Source preview</div>
+            <div class="card-sub">Click any citation to open its exact location</div>
+          </div>
+          {{ icon('book', 18) }}
+        </div>
+        <div class="card-body">
+          <div class="source-preview" id="source-preview">
+            <div class="muted small">No citation selected yet. Ask a question, then click a
+              citation button to see the passage — with a link to jump to the page, slide or
+              video timestamp.</div>
+          </div>
+          <div class="divider"></div>
+          <div class="stack-sm">
+            <div class="tiny strong">Try these</div>
+            <button class="chip" data-prompt="Why can heap construction be done in O(n)?">Why is build-heap O(n)?</button>
+            <button class="chip" data-prompt="Which collision strategy avoids primary clustering?">Avoiding clustering</button>
+            <button class="chip" data-prompt="Why does Dijkstra fail with negative edges?">Dijkstra &amp; negatives</button>
+            <button class="chip" data-prompt="How do I bake sourdough bread at home?">Off-material (refusal)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}

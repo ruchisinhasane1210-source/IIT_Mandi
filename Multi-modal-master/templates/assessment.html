@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Practice · TraceLearn{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <div class="page-head fade-up">
+    <div>
+      <div class="eyebrow">Assessment</div>
+      <h1 class="page-title">Adaptive practice</h1>
+      <p class="page-sub">
+        Questions are chosen so your predicted chance of answering correctly sits near 70%,
+        weighted toward your weakest topics and their prerequisites. Every question is
+        verified, tagged to a source, and skipped if you have seen it before.
+      </p>
+    </div>
+    <div class="row">
+      <button class="btn btn-outline" id="diagnostic-btn">{{ icon('target', 16) }} Diagnostic (10)</button>
+      <button class="btn btn-primary" id="start-btn">{{ icon('bolt', 16) }} Generate quiz</button>
+    </div>
+  </div>
+
+  <!-- ---------------------------- starter ---------------------------- -->
+  <div class="card pad fade-up d1" id="starter">
+    <div class="grid cols-3">
+      <div>
+        <div class="stat-label">Length</div>
+        <div class="row mt-sm">
+          <span class="chip active" data-num="5">5</span>
+          <span class="chip" data-num="8">8</span>
+          <span class="chip" data-num="10">10</span>
+        </div>
+      </div>
+      <div>
+        <div class="stat-label">Types</div>
+        <div class="row mt-sm wrap">
+          <span class="chip active" data-kind="mcq">Multiple choice</span>
+          <span class="chip active" data-kind="short_answer">Short answer</span>
+          <span class="chip active" data-kind="numerical">Numerical</span>
+        </div>
+      </div>
+      <div>
+        <div class="stat-label">Focus</div>
+        <div class="row mt-sm">
+          <span class="chip active" id="focus-adaptive">Adaptive (my weak spots)</span>
+        </div>
+      </div>
+    </div>
+    {% if demo_mode %}
+    <div class="note mt">
+      {{ icon('sparkles', 18) }}
+      <div>Demo mode serves the seeded verification-passing question bank. Add a model key to
+        generate fresh questions with blind-solve verification and distractor misconceptions.</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ------------------------------ quiz ----------------------------- -->
+  <div id="quiz-zone" class="hide">
+    <div class="card fade-up">
+      <div class="q-card">
+        <div class="quiz-progress">
+          <span class="q-index" id="q-progress">Question 1 of 5</span>
+          <div class="bar grow"><div class="bar-fill primary" id="q-bar" style="width:0%"></div></div>
+          <span class="badge" id="q-difficulty">difficulty 3</span>
+        </div>
+
+        <div class="q-text" id="q-text"></div>
+        <div class="options" id="q-options"></div>
+        <textarea class="textarea hide" id="q-free" placeholder="Type your answer…"></textarea>
+
+        <div class="confidence">
+          <span class="tiny muted strong">How confident are you?</span>
+          <span class="chip" data-conf="1">1 · Guessing</span>
+          <span class="chip" data-conf="3">3 · Fairly sure</span>
+          <span class="chip" data-conf="5">5 · Certain</span>
+        </div>
+
+        <div class="row between mt-lg">
+          <button class="btn btn-ghost" id="quit-btn">Quit</button>
+          <button class="btn btn-primary" id="next-btn" disabled>Next {{ icon('arrow-right', 16) }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var courseId = (window.TL && window.TL.courseId) || 'dsa_6006';
+    var params = new URLSearchParams(location.search);
+    var focusTopic = params.get('topic');
+
+    var num = 5, kinds = ['mcq', 'short_answer', 'numerical'];
+    var questions = [], index = 0, answers = {}, confidence = {}, selected = null, currentConf = null;
+
+    var starter = document.getElementById('starter');
+    var zone = document.getElementById('quiz-zone');
+
+    document.querySelectorAll('.chip[data-num]').forEach(function (c) {
+      c.addEventListener('click', function () {
+        document.querySelectorAll('.chip[data-num]').forEach(function (x) { x.classList.remove('active'); });
+        c.classList.add('active'); num = Number(c.dataset.num);
+      });
+    });
+    document.querySelectorAll('.chip[data-kind]').forEach(function (c) {
+      c.addEventListener('click', function () {
+        c.classList.toggle('active');
+        kinds = Array.prototype.map.call(document.querySelectorAll('.chip[data-kind].active'), function (x) { return x.dataset.kind; });
+        if (!kinds.length) { kinds = ['mcq']; }
+      });
+    });
+    document.querySelectorAll('.chip[data-conf]').forEach(function (c) {
+      c.addEventListener('click', function () {
+        document.querySelectorAll('.chip[data-conf]').forEach(function (x) { x.classList.remove('on'); });
+        c.classList.add('on'); currentConf = Number(c.dataset.conf);
+      });
+    });
+
+    document.getElementById('start-btn').addEventListener('click', function () { start(false); });
+    document.getElementById('diagnostic-btn').addEventListener('click', function () { start(true); });
+    document.getElementById('quit-btn').addEventListener('click', function () { location.reload(); });
+    document.getElementById('next-btn').addEventListener('click', next);
+
+    function start(isDiagnostic) {
+      var body = isDiagnostic
+        ? {}
+        : { number_of_questions: num, question_types: kinds, topics: focusTopic ? [focusTopic] : null };
+      var url = isDiagnostic
+        ? '/api/courses/' + courseId + '/diagnostic'
+        : '/api/courses/' + courseId + '/assessments/generate';
+
+      fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (!data.questions || !data.questions.length) { tlToast('No questions available.'); return; }
+          questions = data.questions;
+          window.__assessmentId = data.assessment_id;
+          index = 0; answers = {}; confidence = {};
+          starter.classList.add('hide');
+          zone.classList.remove('hide');
+          render();
+        });
+    }
+
+    function render() {
+      var q = questions[index];
+      selected = null; currentConf = null;
+      document.querySelectorAll('.chip[data-conf]').forEach(function (x) { x.classList.remove('on'); });
+      document.getElementById('q-progress').textContent = 'Question ' + (index + 1) + ' of ' + questions.length;
+      document.getElementById('q-bar').style.width = ((index) / questions.length * 100) + '%';
+      document.getElementById('q-difficulty').textContent = 'difficulty ' + q.difficulty;
+      document.getElementById('q-text').textContent = q.question_text;
+
+      var opts = document.getElementById('q-options');
+      var free = document.getElementById('q-free');
+      opts.innerHTML = '';
+      if (q.question_type === 'mcq') {
+        free.classList.add('hide');
+        q.options.forEach(function (o, i) {
+          var node = document.createElement('div');
+          node.className = 'option';
+          node.innerHTML = '<span class="option-key">' + 'ABCD'[i] + '</span><span>' + o.text + '</span>';
+          node.addEventListener('click', function () {
+            opts.querySelectorAll('.option').forEach(function (x) { x.classList.remove('selected'); });
+            node.classList.add('selected');
+            selected = o.text;
+            document.getElementById('next-btn').disabled = false;
+          });
+          opts.appendChild(node);
+        });
+      } else {
+        free.classList.remove('hide');
+        free.value = '';
+        free.oninput = function () { document.getElementById('next-btn').disabled = !free.value.trim(); };
+      }
+      document.getElementById('next-btn').disabled = true;
+      document.getElementById('next-btn').innerHTML = (index === questions.length - 1)
+        ? 'Finish' : 'Next <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>';
+    }
+
+    function next() {
+      var q = questions[index];
+      answers[q.id] = q.question_type === 'mcq' ? (selected || '') : document.getElementById('q-free').value.trim();
+      confidence[q.id] = currentConf;
+      if (index < questions.length - 1) { index += 1; render(); return; }
+      submit();
+    }
+
+    function submit() {
+      document.getElementById('next-btn').disabled = true;
+      document.getElementById('next-btn').textContent = 'Grading…';
+      fetch('/api/assessments/' + window.__assessmentId + '/submit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers: answers }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function () { location.href = '/results'; })
+        .catch(function () { tlToast('Could not submit — check the server.'); });
+    }
+  })();
+</script>
+{% endblock %}

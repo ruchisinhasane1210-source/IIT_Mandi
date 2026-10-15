@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Concept Map · TraceLearn{% endblock %}
+
+{% set bandcolor = {'high': '#10B981', 'mid': '#F59E0B', 'low': '#EF4444'} %}
+
+{% block content %}
+<div class="page">
+
+  <div class="page-head fade-up">
+    <div>
+      <div class="eyebrow">Knowledge base</div>
+      <h1 class="page-title">Concept map</h1>
+      <p class="page-sub">
+        Topics are nodes, prerequisite links are edges, and colour is your current mastery.
+        Dependents of a weak prerequisite are shaded toward risk so you can see a gap
+        blocking harder work downstream.
+      </p>
+    </div>
+    <div class="graph-legend">
+      <span><i style="background:#10B981"></i> Mastered (≥70%)</span>
+      <span><i style="background:#F59E0B"></i> Developing (40–69%)</span>
+      <span><i style="background:#EF4444"></i> Weak (&lt;40%)</span>
+    </div>
+  </div>
+
+  <div class="graph-layout" id="graph-layout">
+
+    <div class="graph-wrap fade-up d1">
+      <svg class="chart" viewBox="0 0 {{ graph.width }} {{ graph.height }}"
+           style="min-width: {{ graph.width }}px; height: {{ graph.height }}px" role="img"
+           aria-label="Prerequisite graph of course topics coloured by mastery">
+
+        <defs>
+          <pattern id="grid" width="26" height="26" patternUnits="userSpaceOnUse">
+            <path d="M26 0H0V26" fill="none" stroke="var(--border)" stroke-width="1" opacity=".5"/>
+          </pattern>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--border-strong)"/>
+          </marker>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid)" rx="14"/>
+
+        {% for e in graph.edges %}
+        <path d="M {{ e.x1 }} {{ e.y1 }} C {{ e.cx }} {{ e.y1 }}, {{ e.cx }} {{ e.y2 }}, {{ e.x2 }} {{ e.y2 }}"
+              fill="none" stroke="var(--border-strong)" stroke-width="1.8" marker-end="url(#arrow)" opacity=".85"/>
+        {% endfor %}
+
+        {% for n in graph.nodes %}
+        <g class="graph-node fade-up" style="animation-delay: {{ loop.index0 * 0.04 }}s"
+           data-name="{{ n.name }}" data-mastery="{{ (n.p_mastery*100)|round|int }}"
+           data-attempts="{{ n.attempts }}" data-desc="{{ n.description or '' }}"
+           data-topic="{{ n.id }}">
+          <rect x="{{ n.x }}" y="{{ n.y }}" width="{{ graph.node_w }}" height="{{ graph.node_h }}" rx="14"
+                fill="{{ bandcolor[n.band] }}" opacity="{{ '0.92' if n.band != 'low' else '0.95' }}"
+                stroke="var(--card)" stroke-width="2.5"/>
+          <text x="{{ n.x + 15 }}" y="{{ n.y + 26 }}" fill="#fff"
+                style="font: 600 13px Sora, sans-serif">{{ n.name[:20] }}</text>
+          <text x="{{ n.x + 15 }}" y="{{ n.y + 46 }}" fill="rgba(255,255,255,.86)"
+                style="font: 500 11.5px Inter, sans-serif">{{ (n.p_mastery*100)|round|int }}% mastery · {{ n.attempts }} attempts</text>
+        </g>
+        {% endfor %}
+      </svg>
+    </div>
+
+    <div class="stack">
+      <div class="card fade-up d2">
+        <div class="card-head"><div class="card-title">Topic detail</div>{{ icon('graph', 18) }}</div>
+        <div class="card-body" id="node-detail">
+          <div class="muted small">Click a node in the map to see its description, mastery and
+            a one-tap way to practise it.</div>
+        </div>
+      </div>
+
+      <div class="card fade-up d3">
+        <div class="card-head"><div class="card-title">Prerequisites</div></div>
+        <div class="card-body tight">
+          {% for n in graph.nodes if n.band == 'low' %}
+          <div class="between" style="padding:9px 8px;border-bottom:1px solid var(--border)">
+            <span class="small strong">{{ n.name }}</span>
+            <span class="badge badge-low">{{ (n.p_mastery*100)|round|int }}%</span>
+          </div>
+          {% else %}
+          <div class="empty"><div class="empty-sub">No weak topics — nicely done.</div></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var detail = document.getElementById('node-detail');
+    document.querySelectorAll('.graph-node').forEach(function (node) {
+      node.addEventListener('click', function () {
+        var d = node.dataset;
+        var color = Number(d.mastery) >= 70 ? 'high' : (Number(d.mastery) >= 40 ? 'mid' : 'low');
+        detail.innerHTML =
+          '<div class="between" style="margin-bottom:10px">' +
+            '<span class="strong">' + d.name + '</span>' +
+            '<span class="badge badge-' + color + '">' + d.mastery + '%</span>' +
+          '</div>' +
+          '<p class="small muted">' + (d.desc || 'No description recorded for this topic.') + '</p>' +
+          '<div class="divider"></div>' +
+          '<div class="row">' +
+            '<a class="btn btn-primary btn-sm" href="/assessment?topic=' + d.topic + '">Practice this topic</a>' +
+          '</div>';
+      });
+    });
+  })();
+</script>
+{% endblock %}

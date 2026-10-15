@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Results · TraceLearn{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  {% if not report %}
+  <div class="card fade-up">
+    <div class="empty">
+      <div class="empty-icon">{{ icon('quiz', 24) }}</div>
+      <div class="empty-title">No completed assessment yet</div>
+      <div class="empty-sub">Take a quiz and your cited results will appear here.</div>
+      <a href="/assessment" class="btn btn-primary mt">{{ icon('bolt', 16) }} Start a quiz</a>
+    </div>
+  </div>
+  {% else %}
+
+  <div class="page-head fade-up">
+    <div>
+      <div class="eyebrow">Assessment report</div>
+      <h1 class="page-title">Your results</h1>
+      <p class="page-sub">Every wrong answer is explained with a citation, and each
+        distractor you picked is logged against a named misconception.</p>
+    </div>
+    <a href="/assessment" class="btn btn-primary">{{ icon('refresh', 16) }} New quiz</a>
+  </div>
+
+  <div class="grid cols-4 mb">
+    <div class="stat {{ 'high' if report.score >= 70 else ('mid' if report.score >= 40 else 'low') }} fade-up d1">
+      <div class="stat-label">Score</div>
+      <div class="stat-value">{{ report.score | round(0) | int }}<small>%</small></div>
+      <div class="stat-hint">{{ report.results | selectattr('is_correct') | list | length }} of {{ report.results|length }} correct</div>
+    </div>
+    <div class="stat fade-up d2">
+      <div class="stat-label">Questions</div>
+      <div class="stat-value">{{ report.results|length }}</div>
+      <div class="stat-hint">Graded and logged to your learner model</div>
+    </div>
+    <div class="stat low fade-up d3">
+      <div class="stat-label">Misconceptions</div>
+      <div class="stat-value">{{ report.results | selectattr('misconception') | list | length }}</div>
+      <div class="stat-hint">Named and now tracked</div>
+    </div>
+    <div class="stat accent fade-up d4">
+      <div class="stat-label">Mastery updated</div>
+      <div class="stat-value">{{ report.results|length }}</div>
+      <div class="stat-hint">BKT posteriors recalculated</div>
+    </div>
+  </div>
+
+  <div class="grid cols-hero">
+    <div class="stack">
+      {% for r in report.results %}
+      <div class="card pad fade-up">
+        <div class="between">
+          <span class="badge {{ 'badge-high' if r.is_correct else 'badge-low' }}">
+            <span class="dot"></span>{{ 'Correct' if r.is_correct else 'Incorrect' }}
+          </span>
+          <span class="tiny muted">{{ r.topic }}</span>
+        </div>
+        <div class="strong mt mt-sm" style="font-size:15px">{{ r.question_text }}</div>
+
+        <div class="grid cols-2 mt-sm" style="gap:10px">
+          <div>
+            <div class="tiny muted strong">Your answer</div>
+            <div class="small" style="color: {{ 'var(--high)' if r.is_correct else 'var(--low)' }}">{{ r.submitted_answer or '—' }}</div>
+          </div>
+          <div>
+            <div class="tiny muted strong">Correct answer</div>
+            <div class="small">{{ r.correct_answer }}</div>
+          </div>
+        </div>
+
+        <div class="note mt-sm">{{ icon('book', 18) }}<div>{{ r.explanation }}</div></div>
+
+        {% if r.misconception %}
+        <div class="note warn mt-sm">{{ icon('alert', 18) }}<div><strong>Misconception:</strong> {{ r.misconception }}</div></div>
+        {% endif %}
+
+        {% if r.citation or r.unit_id %}
+        <div class="cite-list">
+          <button class="cite" data-unit="{{ r.unit_id or '' }}" data-source="{{ r.citation.get('source_id') or '' }}">
+            {{ icon('book', 14) }}
+            <span>
+              {% if r.citation.get('timestamp_start') is not none %}Play from {{ r.citation.get('timestamp_start') | hms }}
+              {% elif r.citation.get('slide_number') %}Open slide {{ r.citation.get('slide_number') }}
+              {% elif r.citation.get('page_number') %}Open page {{ r.citation.get('page_number') }}
+              {% else %}Open source{% endif %}
+            </span>
+            <span class="cite-type">{{ r.citation.get('source_id') or '' }}</span>
+          </button>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="stack">
+      <div class="card fade-up d2">
+        <div class="card-head"><div class="card-title">Next actions</div>{{ icon('target', 18) }}</div>
+        <div class="card-body">
+          <div class="note">{{ icon('sparkles', 18) }}<div>{{ report.next_actions | join(' ') }}</div></div>
+          <div class="row mt">
+            <a href="/mastery" class="btn btn-outline btn-sm">View mastery</a>
+            <a href="/chat" class="btn btn-primary btn-sm">Ask the tutor</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card fade-up d3">
+        <div class="card-head"><div class="card-title">Weak topics</div></div>
+        <div class="card-body tight">
+          {% for t in report.weak_topics %}
+          <div class="between" style="padding:9px 8px;border-bottom:1px solid var(--border)">
+            <span class="small strong">{{ t }}</span><span class="badge badge-low">needs work</span>
+          </div>
+          {% else %}
+          <div class="empty"><div class="empty-sub">No weak topics in this quiz.</div></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
