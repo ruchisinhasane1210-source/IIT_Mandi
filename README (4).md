@@ -6,8 +6,6 @@ TraceLearn ingests your course material (lecture videos, audio, PDFs, slide deck
 
 Built for the **Multimodal AI Hackathon 2026, Track D (Personalized Tutoring & Adaptive Learning)**.
 
-> **Runs with zero API keys.** Without any configuration, TraceLearn starts in **demo mode** with a fully seeded MIT 6.006 (Introduction to Algorithms) course stored in a local SQLite file.
-
 ---
 
 ## Table of Contents
@@ -138,6 +136,7 @@ Built for the **Multimodal AI Hackathon 2026, Track D (Personalized Tutoring & A
 - **Python 3.10 or newer.** The code uses modern type-hint syntax such as `str | None`.
 - **pip** and **venv**, which ship with most Python installs.
 - **Git**, to clone the repository.
+- **API** , for database supabase key , for AI features Groq + Gemini key.
 - *(Optional)* **FFmpeg**, for broader audio/video handling and local Whisper transcription.
 - *(Optional)* API keys for Gemini, Groq and Supabase. See [Configuration](#configuration).
 
